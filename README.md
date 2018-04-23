@@ -1,5 +1,5 @@
 # make-gcc
-Bash script to build arbitrary versions of g++, boost and gdb.
+Bash script to build arbitrary versions of g++, boost and gdb on linux.
 
 Builds a specified version of the gcc compiler, boost library
 and gdb debugger.
