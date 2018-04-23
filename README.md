@@ -13,6 +13,7 @@ For each run a log is created in /tmp/make-gcc.sh-DTS.log where
 DTS is the date-time stamp of the run. The log location can be
 controlled by setting the LOGDIR environment variable.
 
+### Example 1
 Here is how its used to build gcc-6.4.0, boost-1.66.0 and gdb-8.1
 in a local directory.
 
@@ -29,6 +30,7 @@ This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ```
 
+### Example 2
 If you want to explicitly specify the output, do this.
 
 ```bash
