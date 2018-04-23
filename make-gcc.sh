@@ -132,7 +132,9 @@ DESCRIPTION
     and gdb debugger.
 
     To use it after the installation, the LD_LIBRARY_PATH, PATH and
-    MANPATH variables must be set properly.
+    MANPATH variables must be set properly. It generates a tool named
+    gcc-enable to set them for you. It also generates a tool named
+    gcc-disable to disable them.
 
     For each run a log is created in /tmp/$BASENAME-DTS.log where
     DTS is the date-time stamp of the run. The log location can
