@@ -5,9 +5,11 @@ Builds a specified version of the gcc compiler, boost library
 and gdb debugger.
 
 To use it after the installation, the LD_LIBRARY_PATH, PATH and
-MANPATH variables must be set properly.
+MANPATH variables must be set properly. It generates a tool
+named gcc-enable to set them for you. It also generates a tool
+named gcc-disable to disable them.
 
-For each run a log is created in /tmp/make-gcc-2.sh-DTS.log where
+For each run a log is created in /tmp/make-gcc.sh-DTS.log where
 DTS is the date-time stamp of the run. The log location can be
 controlled by setting the LOGDIR environment variable.
 
@@ -17,12 +19,26 @@ in a local directory.
 ```bash
 $ # build in ./linux-ubuntu-16.04.3-x86_64/6.4.0-1.66.0-8.1
 $ ./make-gcc.sh 6.4.0 1.66.0 8.1
+.
+.
+$ source ./linux-ubuntu-16.04.3-x86_64/6.4.0-1.66.0-8.1/gcc-enable
+$ g++ --version$ gcc --version
+gcc (GCC) 6.4.0
+Copyright (C) 2017 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ```
 
 If you want to explicitly specify the output, do this.
 
 ```bash
 $ ./make-gcc.sh 6.4.0 1.66.0 8.1 -o /opt/gcc
+$ source /opt/gcc/bin/gcc-enable
+$ g++ --version$ gcc --version
+gcc (GCC) 6.4.0
+Copyright (C) 2017 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ```
 
 ### Arguments
