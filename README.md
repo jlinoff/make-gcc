@@ -65,7 +65,8 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 ### Tested Platforms
 
 | Platform | gcc | boost | gdb |
-| -------- | --- | ----- | --- |
+| -------- | ---: | -----: | ---: |
 | centos-6.9 | 6.4.0 | 1.66.0 | 8.1 |
 | centos-7.4 | 6.4.0 | 1.66.0 | 8.1 |
 | ubuntu-16.04 | 6.4.0 | 1.66.0 | 8.1 |
+| ubuntu-16.04 | 7.3.0 | 1.67.0 | 8.1 |
