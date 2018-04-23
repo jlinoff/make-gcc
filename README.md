@@ -61,3 +61,11 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 | -o DIR     | --out DIR       | Explicitly specify the output directory path. This overrides the prefix so|platform and version information are as lost |
 | -p PREFIX  | --prefix PREFIX | Prefix of the build location. |
 | -V         | --version.      | Print the program version and exit. |
+
+### Tested Platforms
+
+| Platform | gcc | boost | gdb |
+| -------- | --- | ----- | --- |
+| centos-6.9 | 6.4.0 | 1.66.0 | 8.1 |
+| centos-7.4 | 6.4.0 | 1.66.0 | 8.1 |
+| ubuntu-16.04 | 6.4.0 | 1.66.0 | 8.1 |
