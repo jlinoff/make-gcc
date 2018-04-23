@@ -9,8 +9,8 @@ MANPATH variables must be set properly. It generates a tool
 named gcc-enable to set them for you. It also generates a tool
 named gcc-disable to disable them.
 
-For each run a log is created in /tmp/make-gcc.sh-DTS.log where
-DTS is the date-time stamp of the run. The log location can be
+For each run a log of stdout and stderr is created in /tmp/make-gcc.sh-DTS.log
+where DTS is the date-time stamp of the run. The log location can be
 controlled by setting the LOGDIR environment variable.
 
 ### Example 1
