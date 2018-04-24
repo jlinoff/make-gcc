@@ -4,7 +4,9 @@
 Bash script to build arbitrary versions of g++, boost and gdb on linux.
 
 Builds a specified version of the gcc compiler, boost library
-and gdb debugger.
+and gdb debugger. It was written to consolidate the functionality
+of the version specific scripts that I have written into a single
+tool.
 
 To use it after the installation, the LD_LIBRARY_PATH, PATH and
 MANPATH variables must be set properly. It generates a tool
