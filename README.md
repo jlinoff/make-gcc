@@ -1,4 +1,6 @@
 # make-gcc
+[![Releases](https://img.shields.io/github/release/jlinoff/make-gcc.svg?style=flat)](https://github.com/jlinoff/make-gcc/releases)
+
 Bash script to build arbitrary versions of g++, boost and gdb on linux.
 
 Builds a specified version of the gcc compiler, boost library
