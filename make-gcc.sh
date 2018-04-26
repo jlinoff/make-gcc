@@ -378,11 +378,21 @@ function prerequisites() {
         fi
     done
 
-    if ! which curl >/dev/null 2>&1 ; then
-        BLD_SYS_PKG_UPDATE=1
-    fi
+    # Unset LD_LIBRARY_PATH because it can interfere
+    # with some initialization tools.
+    local LD_LIBRARY_PATH_CACHE="$LD_LIBRARY_PATH"
+    unset LD_LIBRARY_PATH
+    local Semaphore=/tmp/.updated-syspkgs
 
     if [ -f /usr/bin/dnf ] ; then
+        # Special case handling for root logins.
+        if (( EUID == 0 )) && [ ! -f $Semaphore ] ; then
+            _exec dnf clean all
+            _exec dnf update -y
+            _exec dnf install -y sudo
+            _exec touch $Semaphore
+        fi
+
         _exec sudo dnf install -y \
               curl xz bxz tree time atop htop \
               gawk \
@@ -403,6 +413,16 @@ function prerequisites() {
         _exec sudo dnf install -y which
 
     elif [ -f /usr/bin/yum ] ; then
+        # Special case handling for root logins.
+        if (( EUID == 0 )) && [ ! -f $Semaphore ] ; then
+            _exec yum clean all
+            _exec yum update -y
+            _exec yum install -y sudo
+            _exec yum install -y yum-utils
+            _exec touch /tmp/.make-gcc-yum-updated
+            _exec touch $Semaphore
+        fi
+
         # https://gcc.gnu.org/install/prerequisites.html
         _exec sudo yum install -y \
               curl xz bxz tree time atop htop \
@@ -424,6 +444,17 @@ function prerequisites() {
         _exec sudo yum install -y which
 
     elif [ -f /usr/bin/apt-get ] ; then
+        # Special case handling for root logins.
+        if (( EUID == 0 )) && [ ! -f $Semaphore ] ; then
+            _exec apt-get clean all
+            _exec apt-get upgrade -y
+            _exec apt-get update -y
+            _exec apt-get upgrade -y
+            _exec apt-get install -y sudo
+            _exec apt-get install -y apt-file apt-utils
+            _exec touch $Semaphore
+        fi
+
         _exec apt-get install -y \
               curl xz-utils tree time atop htop \
               gawk \
@@ -443,6 +474,7 @@ function prerequisites() {
         # Stuff needed for this script.
         _exec sudo apt-get install -y debianutils
     fi
+    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH_CACHE"
 }
 
 # gcc
@@ -661,7 +693,7 @@ function build_all() {
 # Main
 # ========================================================================
 readonly BASENAME=$(basename -- $(readlink -m ${BASH_SOURCE[0]}))
-readonly VERSION='0.8.0'
+readonly VERSION='0.8.1'
 readonly PLATFORM=$(_platform)
 
 # Start by logging everything.
