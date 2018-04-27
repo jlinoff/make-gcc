@@ -68,9 +68,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 ### Tested Platforms
 
-| Platform | gcc | boost | gdb |
-| -------- | ---: | -----: | ---: |
-| centos-6.9 | 6.4.0 | 1.66.0 | 8.1 |
-| centos-7.4 | 6.4.0 | 1.66.0 | 8.1 |
-| ubuntu-16.04 | 6.4.0 | 1.66.0 | 8.1 |
-| ubuntu-16.04 | 7.3.0 | 1.67.0 | 8.1 |
+| Platform | gcc | boost | gdb | Notes |
+| -------- | ---: | -----: | ---: | ----- |
+| centos-6.9 | 6.4.0 | 1.66.0 | 8.1 | |
+| centos-7.4 | 6.4.0 | 1.66.0 | 8.1 | |
+| debian-9 | 6.4.0 | 1.66.0 | 8.1 | Had to manually edit terminal.c in readline-7.0 to expose UP, it appears to be a bug. |
+| ubuntu-16.04 | 6.4.0 | 1.66.0 | 8.1 | |
+| ubuntu-16.04 | 7.3.0 | 1.67.0 | 8.1 | |
