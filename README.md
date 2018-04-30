@@ -75,3 +75,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 | debian-9 | 6.4.0 | 1.66.0 | 8.1 |
 | ubuntu-16.04 | 6.4.0 | 1.66.0 | 8.1 |
 | ubuntu-16.04 | 7.3.0 | 1.67.0 | 8.1 |
+
+### TODO
+
+1. Make boost and gdb optional.
+2. Add options to explicitly specify them: `-b/--boost` and `-g/--gdb`.
+3. Make the 2nd and 3rd positional arguments optional.
