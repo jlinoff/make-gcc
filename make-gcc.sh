@@ -95,6 +95,7 @@ function _exeq() {
 # Decorate a command. Do not exit if the return code is not zero.
 function _exec_nox() {
     local Cmd="$*"
+    __msg ${BASH_LINENO[0]} "INFO" "\033[1m" "cmd.pwd=$(pwd)"
     __msg ${BASH_LINENO[0]} "INFO" "\033[1m" "cmd.cmd=$Cmd"
     eval "$Cmd"
     local Status=$?
@@ -125,11 +126,11 @@ function _help() {
 
     cat <<EOF
 USAGE
-    $B$BASENAME$R [OPTIONS] GCC_VERSION BOOST_VERSION GDB_VERSION
+    $B$BASENAME$R [OPTIONS] GCC_VERSION [BOOST_VERSION [GDB_VERSION]]
 
 DESCRIPTION
-    Builds a specified version of the gcc compiler, boost library
-    and gdb debugger.
+    Builds a specified version of the gcc/g++ compiler and optionally
+    the boost library and gdb debugger.
 
     To use it after the installation, the LD_LIBRARY_PATH, PATH and
     MANPATH variables must be set properly. It generates a tool named
@@ -142,22 +143,43 @@ DESCRIPTION
 
 ARGUMENTS
 
-    GCC_VERSION     The version of gcc to build.
+    GCC_VERSION     Required.
+                    The version of gcc to build.
                     Examples would be 6.4.0 and 7.3.0.
 
-    BOOST_VERSION   The version of boost to build.
+    BOOST_VERSION   Optional.
+                    Same as --boost-version BOOST_VERSION.
+                    The version of boost to build.
                     Examples would be 1.66.0 and 1.67.0.
 
-    GDB_VERSION     The version of gdb to build.
+    GDB_VERSION     Optional.
+                    Same as --gdb-version GDB_VERSION.
+                    The version of gdb to build.
                     An example would be 8.1.
 
 OPTIONS
+    -b BOOST_VERSION, --boost-version BOOST_VERSION
+                    Specify the boost version to build.
+                    If the version is not specified it
+                    will not be built unless the
+                    BOOST_VERSION argument is specified.
+
     -c, --clean     Clean before building.
 
     -f FLAVOR, --boost-flavor
                     The boost C++ standard to build to.
                     Examples are c++11, c++14, and gnu++14.
                     Default: c++11
+
+    -g GDB_VERSION, --gdb-version GDB_VERSION
+                    Specify the gdb version to build.
+                    If the version is not specified it
+                    will not be built unless the
+                    GDB_VERSION argument is specified.
+
+    -G GCC_CONFIGURE_OPTIONS, --gcc-extra-conf-opts GCC_CONFIGURE_OPTIONS
+                    Additional configure options like
+                    --with-python=python2.
 
     -h, --help      Help message.
 
@@ -180,17 +202,26 @@ EXAMPLES
     # Example 1: help
     \$ $B$BASENAME$R -h
 
-    # Example 2: build in current directory
+    # Example 2: build just the compiler in the current directory.
+    \$ $B$BASENAME$R 6.4.0
+
+    # Example 3: build in gcc, boost and gdb in the current directory
     \$ $B$BASENAME$R 6.4.0 1.66.0 8.1
 
-    # Example 3. build in /opt/gcc/6.4.0-1.66.0-8.1
-    \$ $B$BASENAME$R -p /opt/gcc
+    # Example 4. build in /opt/gcc/6.4.0-1.66.0-8.1
+    \$ $B$BASENAME$R -p /opt/gcc 6.4.0
 
-    # Example 4: build in current directory, c++14
-    \$ $B$BASENAME$R -f c++14 6.4.0 1.66.0 8.1
+    # Example 5: build gcc and boost in current directory, c++14
+    \$ $B$BASENAME$R -f c++14 6.4.0 1.66.0
 
-    # Example 5: explicitly define the output path.
+    # Example 6: explicitly define the output path.
     \$ $B$BASENAME$R -o /opt/mytools -f c++14 6.4.0 1.66.0 8.1
+
+    # Example 7: explicitly compile for use with python2.7
+    \$ $B$BASENAME$R -G '--with-python=python2' 6.4.0
+
+PROJECT
+    https://github.com/jlinoff/make-gcc
 
 EOF
     exit 0
@@ -205,8 +236,10 @@ function _version() {
 # Get the CLI options
 function _getopts() {
     # The OPT_CACHE is to cache short form options.
+    local Arg1=0
+    local Arg2=0
+    local Arg3=0
     local OPT_CACHE=()
-    local OPT_TARGET
     while (( $# )) || (( ${#OPT_CACHE[@]} )) ; do
         if (( ${#OPT_CACHE[@]} > 0 )) ; then
             OPT="${OPT_CACHE[0]}"
@@ -230,11 +263,19 @@ function _getopts() {
                     OPT_CACHE+=("-$CHAR")
                 done
                 ;;
+            -b|--boost-version|--boost-version=*)
+                if [ -z "${OPT##*=*}" ] ; then
+                    OPT_BOOST_VERSION="${OPT#*=}"
+                else
+                    OPT_BOOST_VERSION="$1"
+                    shift
+                fi
+                [ -z "$OPT_BOOST_VERSION" ] && _err "Missing argument for '$OPT'."
+                ;;
             -c|--clean)
                 OPT_CLEAN=1
                 ;;
             -f|--boost-flavor|--boost-flavor=*)
-                OPT_BOOST_FLAVOR="$1"
                 if [ -z "${OPT##*=*}" ] ; then
                     OPT_BOOST_FLAVOR="${OPT#*=}"
                 else
@@ -242,6 +283,24 @@ function _getopts() {
                     shift
                 fi
                 [ -z "$OPT_BOOST_FLAVOR" ] && _err "Missing argument for '$OPT'."
+                ;;
+            -g|--gdb-version|--gdb-version=*)
+                if [ -z "${OPT##*=*}" ] ; then
+                    OPT_GDB_VERSION="${OPT#*=}"
+                else
+                    OPT_GDB_VERSION="$1"
+                    shift
+                fi
+                [ -z "$OPT_GDB_VERSION" ] && _err "Missing argument for '$OPT'."
+                ;;
+            -G|--gcc-extra-conf-opts|--gcc-extra-conf-opts=*)
+                if [ -z "${OPT##*=*}" ] ; then
+                    OPT_GCC_EXTRA_CONF_OPTS="${OPT#*=}"
+                else
+                    OPT_GCC_EXTRA_CONF_OPTS="$1"
+                    shift
+                fi
+                [ -z "$OPT_GCC_EXTRA_CONF_OPTS" ] && _err "Missing argument for '$OPT'."
                 ;;
             -h|--help)
                 _help
@@ -257,7 +316,6 @@ function _getopts() {
                 [ -z "$OPT_OUT_DIR" ] && _err "Missing argument for '$OPT'."
                 ;;
             -p|--prefix|--prefix=*)
-                OPT_PREFIX_DIR="$1"
                 if [ -z "${OPT##*=*}" ] ; then
                     OPT_PREFIX_DIR="${OPT#*=}"
                 else
@@ -273,11 +331,14 @@ function _getopts() {
                 _err "Unrecognized option '$OPT'."
                 ;;
             *)
-                if [ -z "$OPT_GCC_VERSION" ] ; then
+                if (( Arg1 == 0 )) ; then
+                    (( Arg1 = 1 ))
                     OPT_GCC_VERSION="$OPT"
-                elif [ -z "$OPT_BOOST_VERSION" ] ; then
+                elif (( Arg2 == 0 )) ; then
+                    (( Arg2 = 1 ))
                     OPT_BOOST_VERSION="$OPT"
-                elif [ -z "$OPT_GDB_VERSION" ] ; then
+                elif (( Arg3 == 0 )) ; then
+                    (( Arg3 = 1 ))
                     OPT_GDB_VERSION="$OPT"
                 else
                     _err "Illegal option '$OPT'."
@@ -285,10 +346,8 @@ function _getopts() {
                 ;;
         esac
     done
-    # Make sure that we have all of the arguments.
+    # Make sure that we have all of the required arguments.
     [ -z "$OPT_GCC_VERSION" ] && _err "Argument not specified: GCC_VERSION." || true
-    [ -z "$OPT_BOOST_VERSION" ] && _err "Argument not specified: BOOST_VERSION." || true
-    [ -z "$OPT_GDB_VERSION" ] && _err "Argument not specified: GDB_VERSION." || true
 }
 
 # Clean a string.
@@ -485,9 +544,6 @@ function build_gcc() {
     local LocalDir="gcc-$Version"
     local Semaphore="${BLD_PKG_DIR}/${LocalDir}/${BLD_DONE_SEMAPHORE}"
 
-    # Force a rebuild for individual packages.
-    (( OPT_FORCE_REBUILD )) && rm -rf $Semaphore || true
-
     # Build.
     if [ ! -f $Semaphore ] ; then
         _info "Building ${BLD_PKG_DIR}/$LocalDir."
@@ -511,7 +567,8 @@ function build_gcc() {
         _exec ../configure \
               --prefix=$BLD_REL_DIR \
               --disable-multilib \
-              --enable-languages='c,c++'
+              --enable-languages='c,c++' \
+              ${OPT_GCC_EXTRA_CONF_OPTS}
         _exec make clean
         _exec time make
         _exec time make install
@@ -526,13 +583,13 @@ function build_gcc() {
 # boost
 # URL: https://dl.bintray.com/boostorg
 function build_boost() {
+    if [ -z "$OPT_BOOST_VERSION" ] ; then
+        return
+    fi
     _banner "Fct:${LINENO}:${FUNCNAME[0]}"
     local Version="$OPT_BOOST_VERSION"
     local LocalDir="boost_$Version"
     local Semaphore="${BLD_PKG_DIR}/${LocalDir}/${BLD_DONE_SEMAPHORE}"
-
-    # Force a rebuild for individual packages.
-    (( OPT_FORCE_REBUILD )) && rm -rf $Semaphore || true
 
     if [ ! -f $Semaphore ] ; then
         _info "Building ${BLD_PKG_DIR}/$LocalDir."
@@ -579,13 +636,13 @@ function build_boost() {
 # gdb
 # URL: https://www.gnu.org/software/gdb/download/
 function build_gdb() {
+    if [ -z "$OPT_GDB_VERSION" ] ; then
+        return
+    fi
     _banner "Fct:${LINENO}:${FUNCNAME[0]}"
     local Version="$OPT_GDB_VERSION"
     local LocalDir="gdb-$Version"
     local Semaphore="${BLD_PKG_DIR}/${LocalDir}/${BLD_DONE_SEMAPHORE}"
-
-    # Force a rebuild for individual packages.
-    (( OPT_FORCE_REBUILD )) && rm -rf $Semaphore || true
 
     if [ ! -f $Semaphore ] ; then
         _info "Building ${BLD_PKG_DIR}/$LocalDir."
@@ -637,7 +694,7 @@ export PATH="${BLD_REL_DIR}/bin:\${PATH}"
 export LD_LIBRARY_PATH="${BLD_REL_DIR}/lib64:${BLD_REL_DIR}/lib:\${LD_LIBRARY_PATH}"
 export MANPATH="$BLD_REL_DIR/share/man:\${MANPATH}"
 export INFOPATH="$BLD_REL_DIR/share/info:\${INFOPATH}"
-export MAKE_GCC_CONF="${OPT_GCC_VERSION}-${OPT_BOOST_VERSION}-${OPT_GDB_VERSION}"
+export MAKE_GCC_CONF="${OPT_GCC_VERSION}"
 EOF
 
     local DisableTool="$BLD_REL_DIR/bin/gcc-disable"
@@ -658,12 +715,6 @@ function build_post() {
 cat <<EOF
 
 Build completed successfully.
-
-The following tools are available for testing.
-
-    gcc-$OPT_GCC_VERSION
-    boost-$OPT_BOOST_VERSION
-    gdb-$OPT_GDB_VERSION
 
 To enable access in your environment:
 
@@ -693,7 +744,7 @@ function build_all() {
 # Main
 # ========================================================================
 readonly BASENAME=$(basename -- $(readlink -m ${BASH_SOURCE[0]}))
-readonly VERSION='0.8.1'
+readonly VERSION='0.9.0'
 readonly PLATFORM=$(_platform)
 
 # Start by logging everything.
@@ -703,19 +754,21 @@ exec > >(tee -a $LOGFILE) 2>&1
 
 _banner "$BASENAME-$VERSION $(date)"
 
-OPT_FORCE_REBUILD=0
-OPT_CLEAN=0
-OPT_GCC_VERSION=
-OPT_BOOST_VERSION=
-OPT_BOOST_FLAVOR='c++11'
-OPT_GDB_VERSION=
-OPT_PREFIX_DIR=
-OPT_OUT_DIR=
+# Allow the ability to use environment variables to drive things.
+: ${OPT_GCC_EXTRA_CONF_OPTS=}
+: ${OPT_GCC_VERSION=}
+: ${OPT_BOOST_VERSION=}
+: ${OPT_BOOST_FLAVOR='c++11'}
+: ${OPT_GDB_VERSION=}
+: ${OPT_CLEAN=0}
+: ${OPT_PREFIX_DIR=}
+: ${OPT_OUT_DIR=}
+
 _getopts $*
 
 # Set the build root, it must be an abs path.
 if [ -z "$OPT_OUT_DIR" ] ; then
-    BLD_ROOT_DIR="$PLATFORM/$OPT_GCC_VERSION-$OPT_BOOST_VERSION-$OPT_GDB_VERSION"
+    BLD_ROOT_DIR="$PLATFORM/$OPT_GCC_VERSION"
     [ -n "$OPT_PREFIX_DIR" ] && BLD_ROOT_DIR="$OPT_PREFIX_DIR/$BLD_ROOT_DIR" || true
     BLD_ROOT_DIR=$(readlink -m $BLD_ROOT_DIR)
 else
@@ -731,8 +784,8 @@ BLD_PKG_COUNT=0
 # Global settings.
 export PATH="${BLD_REL_DIR}/bin:${PATH}"
 export LD_LIBRARY_PATH="${BLD_REL_DIR}/lib64:${BLD_REL_PATH}/lib:${PATH}"
-export MANPATH="${BLD_REL_DIR}/man:${MANPATH}"
-export INFOPATH="${BLD_REL_DIR}/info:${MANPATH}"
+export MANPATH="${BLD_REL_DIR}/share/man:${MANPATH}"
+export INFOPATH="${BLD_REL_DIR}/share/info:${MANPATH}"
 
 cat <<EOF
 
@@ -748,25 +801,14 @@ Setup Info
     User     : $(whoami)
     Version  : $VERSION
 
-    gcc version   : $OPT_GCC_VERSION
-    boost version : $OPT_BOOST_VERSION
-    boost flavor  : $OPT_BOOST_FLAVOR
-    gdb version   : $OPT_GDB_VERSION
+    gcc version    : $OPT_GCC_VERSION
+    gcc extra conf : $OPT_GCC_EXTRA_CONF_OPTS
+    boost version  : $OPT_BOOST_VERSION
+    boost flavor   : $OPT_BOOST_FLAVOR
+    gdb version    : $OPT_GDB_VERSION
 EOF
 
 prerequisites
-
-# Allow the user to specify individual build targets.
-if (( ${#OPT_TARGETS[@]} == 0 )) ; then
-    build_all
-else
-    OPT_FORCE_REBUILD=1
-    for TargetList in ${OPT_TARGETS[@]} ; do
-        Targets=($(echo "${TargetList}" | tr ',' ' '))
-        for Target in ${Targets[@]} ; do
-            $Target
-        done
-    done
-fi
+build_all
 
 _info_green "Done"
