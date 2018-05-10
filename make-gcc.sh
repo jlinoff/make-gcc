@@ -553,7 +553,12 @@ function build_gcc() {
         # Cache.
         local CachedPkg="${BLD_CACHE_DIR}/$LocalDir.tar"
         if [ ! -f $CachedPkg ] ; then
-            _exec curl --fail -L https://ftp.gnu.org/gnu/gcc/$LocalDir/$LocalDir.tar.xz --out $CachedPkg
+            # Try the location for newer versions first.
+            _exec_nox curl --fail -L https://ftp.gnu.org/gnu/gcc/$LocalDir/$LocalDir.tar.xz --out $CachedPkg
+            if (( $? )) ; then
+                # It failed, now try locations for older versions.
+                _exec curl --fail -L https://ftp.gnu.org/gnu/gcc/$LocalDir/$LocalDir.tar.bz2 --out $CachedPkg
+            fi
         fi
 
         # Extract and build.
@@ -744,7 +749,7 @@ function build_all() {
 # Main
 # ========================================================================
 readonly BASENAME=$(basename -- $(readlink -m ${BASH_SOURCE[0]}))
-readonly VERSION='0.9.0'
+readonly VERSION='0.9.1'
 readonly PLATFORM=$(_platform)
 
 # Start by logging everything.
