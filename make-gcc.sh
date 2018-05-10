@@ -581,6 +581,12 @@ function build_gcc() {
         _exec touch $Semaphore
         (( BLD_PKG_COUNT++ ))
     fi
+
+    # Final sanity check.
+    local gcc_version="$(${BLD_REL_DIR}/bin/gcc -dumpversion)"
+    if [[ ! "$gcc_version" == "$PKG_VERSION_GCC" ]] ; then
+        _err "Invalid gcc version, cannot continue $gcc_version, expected $PKG_VERSION_GCC."
+    fi
     _exec ls -l ${BLD_REL_DIR}/bin/gcc
     _exec ls -l ${BLD_REL_DIR}/bin/g++
 }
@@ -602,11 +608,15 @@ function build_boost() {
         [ -d $LocalDir ] && _exec rm -rf $LocalDir || true
 
         # Cache the package for faster performance.
-        local CachedPkg="${BLD_CACHE_DIR}/$LocalDir.tar.gz"
+        local CachedPkg="${BLD_CACHE_DIR}/$LocalDir.tar"
         if [ ! -f $CachedPkg ] ; then
             # Change '.' to '_' (i.e. '1.6.0' --> '1_6_0')
             local Version_=$(echo "$Version" | tr '.' '_')
-            _exec curl -L https://dl.bintray.com/boostorg/release/$Version/source/boost_$Version_.tar.gz -o $CachedPkg
+            _exec_nox curl -L https://dl.bintray.com/boostorg/release/$Version/source/boost_$Version_.tar.gz -o $CachedPkg
+            if (( $? )) ; then
+                # Try the location for old versions.
+                _exec curl --fail -L https://sourceforge.net/projects/boost/files/boost/$Version/boost_$FixedVersion.tar.bz2 -o $CachedPkg
+            fi
         fi
 
         # Extract and build.
@@ -619,12 +629,23 @@ function build_boost() {
         _exec ./bootstrap.sh \
               --prefix="${BLD_REL_DIR}" \
               toolset=gcc
-        _exec ./b2 toolset=gcc \
-              variant=release \
-              link=shared,static \
-              threading=multi \
-              cxxflags="-std=$OPT_BOOST_FLAVOR" \
-              install
+        if [ -f 'b2' ] ; then
+            _exec ./b2 toolset=gcc \
+                  variant=release \
+                  link=shared,static \
+                  threading=multi \
+                  cxxflags="-std=$OPT_BOOST_FLAVOR" \
+                  install
+        elif [ -f 'bjam' ] ; then
+            _warn "Boost flavor ignored."
+            _exec ./bjam toolset=gcc \
+                  variant=release \
+                  link=shared,static \
+                  threading=multi \
+                  install
+        else
+            _err "Do not know how to build boost, could not find b2 or bjam."
+        fi
         unset CC
         unset CXX
         popd
@@ -633,7 +654,7 @@ function build_boost() {
     else
         _info "Already built ${BLD_PKG_DIR}/$LocalDir."
     fi
-    _exec ls -l ${BLD_REL_DIR}/include/boost/atomic.hpp
+    _exec ls -l ${BLD_REL_DIR}/include/boost/array.hpp
     _exec ls ${BLD_REL_DIR}/lib/libboost*.so
     _exec ls ${BLD_REL_DIR}/lib/libboost*.a
 }
