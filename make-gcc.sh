@@ -183,6 +183,10 @@ OPTIONS
 
     -h, --help      Help message.
 
+    -j NUM, --jobs NUM
+                    Specify the number of jobs for make.
+                    The default is $OPT_NUM_JOBS.
+
     -o DIR, --out DIR
                     Explicitly specify the output directory
                     path. This overrides the prefix so
@@ -417,6 +421,22 @@ function _platform() {
     printf '%s-%s-%s-%s\n' "$OS_NAME" "$DISTRO_NAME" "$DISTRO_VERSION" "$OS_ARCH"
 }
 
+# Get the number of processors.
+function get_num_procs() {
+    if [ -d /proc/cpuinfo ] ; then
+        # This the easiest way.
+        grep ^processor /proc/cpuinfo | wc -l
+    else
+        # Other platforms are not consistent, try using python.
+        if python -c "import multiprocessing; print(multiprocessing.cpu_count())" >/dev/null 2>&1 ; then
+            python -c "import multiprocessing; print(multiprocessing.cpu_count())"
+        else
+            # We give up.
+            echo 1
+        fi
+    fi
+}
+
 # ========================================================================
 # Build Functions
 # Each function builds a specific package.
@@ -457,6 +477,7 @@ function prerequisites() {
               gawk \
               binutils \
               gzip bzip2 \
+              zlib zlib-devel \
               make \
               tar \
               perl \
@@ -488,6 +509,7 @@ function prerequisites() {
               gawk \
               binutils \
               gzip bzip2 \
+              zlib zlib-devel \
               make \
               tar \
               perl \
@@ -519,6 +541,7 @@ function prerequisites() {
               gawk \
               binutils \
               gzip bzip2 \
+              zlib1g zlib1g-dev \
               make \
               tar \
               perl \
@@ -548,7 +571,7 @@ function build_gcc() {
     if [ ! -f $Semaphore ] ; then
         _info "Building ${BLD_PKG_DIR}/$LocalDir."
         pushd $BLD_PKG_DIR
-        [ -d $LocalDir ] && _exec rm -rf $LocalDir || true
+        [ -d $LocalDir ] && _exec rm -rf $LocalDir* || true
 
         # Cache.
         local CachedPkg="${BLD_CACHE_DIR}/$LocalDir.tar"
@@ -566,17 +589,28 @@ function build_gcc() {
         _exec cd $LocalDir
         _exec tar xf $CachedPkg --strip-components=1
         _exec bash ./contrib/download_prerequisites
-        _exec mkdir xbld
-        _exec cd xbld
-        _exec ../configure --help
-        _exec ../configure \
+
+        # Documentation states that the build
+        # must be done outside the source directory.
+        # This is especially true for older versions.
+        _exec cd ..
+        _exec mkdir $LocalDir.bld
+        _exec cd $LocalDir.bld
+        _exec ../$LocalDir/configure --help
+        _exec ../$LocalDir/configure \
+              ${ExtraOpts} \
               --prefix=$BLD_REL_DIR \
               --disable-multilib \
               --enable-languages='c,c++' \
+              --enable-threads=posix \
+              --enable-checking \
+              --enable-__cxa_atexit \
+              --enable-gnu-indirect-function \
+              --disable-bootstrap \
               ${OPT_GCC_EXTRA_CONF_OPTS}
         _exec make clean
-        _exec time make
-        _exec time make install
+        _exec time make -j $OPT_NUM_JOBS
+        _exec_nox make install
         popd
         _exec touch $Semaphore
         (( BLD_PKG_COUNT++ ))
@@ -584,8 +618,8 @@ function build_gcc() {
 
     # Final sanity check.
     local gcc_version="$(${BLD_REL_DIR}/bin/gcc -dumpversion)"
-    if [[ ! "$gcc_version" == "$PKG_VERSION_GCC" ]] ; then
-        _err "Invalid gcc version, cannot continue $gcc_version, expected $PKG_VERSION_GCC."
+    if [[ ! "$gcc_version" == "$Version" ]] ; then
+        _err "Invalid gcc version, cannot continue $gcc_version, expected $Version."
     fi
     _exec ls -l ${BLD_REL_DIR}/bin/gcc
     _exec ls -l ${BLD_REL_DIR}/bin/g++
@@ -694,8 +728,8 @@ function build_gdb() {
               --prefix=$BLD_REL_DIR \
               --disable-multilib \
               --enable-languages='c,c++'
-        _exec make
-        _exec make install
+        _exec time make -j $OPT_NUM_JOBS
+        _exec time make install
         unset CC
         unset CXX
         popd
@@ -781,6 +815,7 @@ exec > >(tee -a $LOGFILE) 2>&1
 _banner "$BASENAME-$VERSION $(date)"
 
 # Allow the ability to use environment variables to drive things.
+: ${OPT_NUM_JOBS=$(get_num_procs)}
 : ${OPT_GCC_EXTRA_CONF_OPTS=}
 : ${OPT_GCC_VERSION=}
 : ${OPT_BOOST_VERSION=}
@@ -822,6 +857,7 @@ Setup Info
     Date     : $(date)
     Host     : $(hostname)
     LogFile  : $LOGFILE
+    NumJobs  : $OPT_NUM_JOBS
     Platform : $PLATFORM
     Pwd      : $(pwd)
     User     : $(whoami)
