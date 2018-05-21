@@ -2,19 +2,20 @@
 [![Releases](https://img.shields.io/github/release/jlinoff/make-gcc.svg?style=flat)](https://github.com/jlinoff/make-gcc/releases)
 
 Bash script to build arbitrary versions of g++ on linux.
-Can optionally build boost and gdb as well.
+Can optionally build binutils, boost and gdb as well.
 
-Builds a specified version of the gcc compiler and, optionally, the
+Builds a specified version of the gcc compiler and, optionally, binutils, the
 boost library and the gdb debugger on linux. It was written to consolidate
 the functionality of the version specific scripts that I have written into
 a single tool.
 
-To use it after the installation, the LD_LIBRARY_PATH, PATH and
-MANPATH variables must be set properly. It generates a tool
-named gcc-enable to set them for you. It also generates a tool
-named gcc-disable to disable them.
+To use it after the installation, the LD_LIBRARY_PATH, PATH, INFOPATH and
+MANPATH variables must be set properly. 
 
-For each run a log of stdout and stderr is created in /tmp/make-gcc.sh-DTS.log
+It generates a tool named `gcc-enable` to set the environment variables for you
+and it generates a tool named `gcc-disable` to disable them.
+
+For each run a log of stdout and stderr is created in `/tmp/make-gcc.sh-DTS.log`
 where DTS is the date-time stamp of the run. The log location can be
 controlled by setting the LOGDIR environment variable.
 
@@ -31,13 +32,13 @@ $ g++ --version$ gcc --version
 gcc (GCC) 7.3.0
 ```
 
-### Example 2 - Build gcc-6.4.0, boost-1.66.0 and gdb-8.1
-Here is how it is used to build gcc-6.4.0, boost-1.66.0 and gdb-8.1
+### Example 2 - Build gcc-6.4.0, binutils-2.30, boost-1.66.0 and gdb-8.1
+Here is how it is used to build gcc-6.4.0, binutils-2.3d.0, boost-1.66.0 and gdb-8.1
 in a local directory.
 
 ```bash
 $ # build in ./linux-ubuntu-16.04.3-x86_64/6.4.0
-$ ./make-gcc.sh 6.4.0 1.66.0 8.1
+$ ./make-gcc.sh 6.4.0 2.30 1.66.0 8.1
 .
 .
 $ source ./linux-ubuntu-16.04.3-x86_64/6.4.0/gcc-enable
@@ -52,7 +53,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 If you want to explicitly specify the output path, do this.
 
 ```bash
-$ ./make-gcc.sh 6.4.0 1.66.0 8.1 -o /opt/gcc
+$ ./make-gcc.sh 6.4.0 2.30 1.66.0 8.1 -o /opt/gcc
 $ source /opt/gcc/bin/gcc-enable
 $ g++ --version$ gcc --version
 gcc (GCC) 6.4.0
@@ -66,17 +67,19 @@ of boost.
 
 ### Arguments
 
-| Position | Argument      | Required | Meaning    |
-| -------: | ------------- | :-------: | ---------- |
-| 1        | GCC_VERSION   | yes       | The version of gcc to build. |
-| 2        | BOOST_VERSION | no        | The version of boost to build. If not specified, boost is not built. |
-| 3        | GDB_VERSION   | no        | The version of gdb to build. If not specified, gdb is not built. |
+| Position | Argument         | Required | Meaning    |
+| -------: | ---------------- | :-------: | ---------- |
+| 1        | GCC_VERSION      | yes       | The version of gcc to build. |
+| 2        | BINUTILS_VERSION | no        : The version of binutils to build. If not specified, binutils is not built. |
+| 3        | BOOST_VERSION.   | no        | The version of boost to build. If not specified, boost is not built. |
+| 4        | GDB_VERSION      | no        | The version of gdb to build. If not specified, gdb is not built. |
 
 ### Options
 
 | Short Form | Long Form       | Description |
 | ---------- | --------------- | ----------- |
 | -b VERSION | --boost-version VERSION | Specify the boost version to build. If not specified, boost is not built. |
+| -B VERSION | --binutils-version VERSION | Specify the binutils version to build. If not specified, binutils is not built. |
 | -c         | --clean.        | Clean up the target directory before building. |
 | -f FLAVOR  | --flavor FLAVOR | The boost C++ standard to build to. The default is c++11. |
 | -g VERSION | --gdb-version VERSION | Specify the gdb version to build. If not specified, gdb is not built. |
@@ -88,11 +91,16 @@ of boost.
 
 ### Tested Platforms
 
-| Platform | gcc | boost | gdb |
-| -------- | ---: | -----: | ---: | 
-| centos-6.9 | 6.4.0 | 1.66.0 | 8.1 |
-| centos-7.4 | 6.4.0 | 1.66.0 | 8.1 |
-| debian-9 | 6.4.0 | 1.66.0 | 8.1 |
-| ubuntu-16.04 | 6.4.0 | 1.66.0 | 8.1 |
-| ubuntu-16.04 | 7.3.0 | 1.67.0 | 8.1 |
-| ubuntu-16.04 | 7.4.0 | - | - |
+| Platform.    | gcc   | binutils | boost | gdb  |
+| ------------ | ---:  | -------: | ----: | ---: | 
+| centos-6.9   | 6.4.0 | -        | 1.66.0 | 8.1 |
+| centos-6.9   | 4.8.5 | 2.30     | -      | -   |
+| centos-7.4   | 6.4.0 | -        | 1.66.0 | 8.1 |
+| debian-9     | 6.4.0 | -        | 1.66.0 | 8.1 |
+| ubuntu-16.04 | 6.4.0 | -        | 1.66.0 | 8.1 |
+| ubuntu-16.04 | 7.3.0 | -        | 1.67.0 | 8.1 |
+| ubuntu-16.04 | 7.4.0 | -        | -      | -   |
+
+### Errata
+
+1. To get -D_GLIBCXX_HAVE_FENV_H=1 with gcc-4.8.5, had to follow the instructions [here](https://software.intel.com/en-us/forums/intel-c-compiler/topic/489313).
