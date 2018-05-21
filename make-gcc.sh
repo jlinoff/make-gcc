@@ -147,6 +147,12 @@ ARGUMENTS
                     The version of gcc to build.
                     Examples would be 6.4.0 and 7.3.0.
 
+    BINUTILS_VERSION
+                    Option.
+                    Same as --binutils-version BINUTILS_VERSION.
+                    The version of binutils to build.
+                    Examples would be 2.24 or 2.30.
+
     BOOST_VERSION   Optional.
                     Same as --boost-version BOOST_VERSION.
                     The version of boost to build.
@@ -163,6 +169,12 @@ OPTIONS
                     If the version is not specified it
                     will not be built unless the
                     BOOST_VERSION argument is specified.
+
+    -B BINUTILS_VERSION, --binutils-version BINUTILS_VERSION
+                    Specify the binutils version to build.
+                    If the version is not specified it
+                    will not be built unless the
+                    BINUTILS_VERSION argument is specified.
 
     -c, --clean     Clean before building.
 
@@ -209,11 +221,11 @@ EXAMPLES
     # Example 2: build just the compiler in the current directory.
     \$ $B$BASENAME$R 6.4.0
 
-    # Example 3: build in gcc, boost and gdb in the current directory
-    \$ $B$BASENAME$R 6.4.0 1.66.0 8.1
+    # Example 3: build in gcc, binutils, boost and gdb in the current directory
+    \$ $B$BASENAME$R 6.4.0 2.24 1.66.0 8.1
 
     # Example 4. build in /opt/gcc/6.4.0-1.66.0-8.1
-    \$ $B$BASENAME$R -p /opt/gcc 6.4.0
+    \$ $B$BASENAME$R -p /opt/gcc 6.4.0 2.30
 
     # Example 5: build gcc and boost in current directory, c++14
     \$ $B$BASENAME$R -f c++14 6.4.0 1.66.0
@@ -222,7 +234,7 @@ EXAMPLES
     \$ $B$BASENAME$R -o /opt/mytools -f c++14 6.4.0 1.66.0 8.1
 
     # Example 7: explicitly compile for use with python2.7
-    \$ $B$BASENAME$R -G '--with-python=python2' 6.4.0
+    \$ $B$BASENAME$R -G '--with-python=python2' 6.4.0 2.28
 
 PROJECT
     https://github.com/jlinoff/make-gcc
@@ -240,9 +252,7 @@ function _version() {
 # Get the CLI options
 function _getopts() {
     # The OPT_CACHE is to cache short form options.
-    local Arg1=0
-    local Arg2=0
-    local Arg3=0
+    local Arg=0
     local OPT_CACHE=()
     while (( $# )) || (( ${#OPT_CACHE[@]} )) ; do
         if (( ${#OPT_CACHE[@]} > 0 )) ; then
@@ -275,6 +285,15 @@ function _getopts() {
                     shift
                 fi
                 [ -z "$OPT_BOOST_VERSION" ] && _err "Missing argument for '$OPT'."
+                ;;
+            -B|--binutils-version|--binutils-version=*)
+                if [ -z "${OPT##*=*}" ] ; then
+                    OPT_BINUTILS_VERSION="${OPT#*=}"
+                else
+                    OPT_BINUTILS_VERSION="$1"
+                    shift
+                fi
+                [ -z "$OPT_BINUTILS_VERSION" ] && _err "Missing argument for '$OPT'."
                 ;;
             -c|--clean)
                 OPT_CLEAN=1
@@ -335,18 +354,14 @@ function _getopts() {
                 _err "Unrecognized option '$OPT'."
                 ;;
             *)
-                if (( Arg1 == 0 )) ; then
-                    (( Arg1 = 1 ))
-                    OPT_GCC_VERSION="$OPT"
-                elif (( Arg2 == 0 )) ; then
-                    (( Arg2 = 1 ))
-                    OPT_BOOST_VERSION="$OPT"
-                elif (( Arg3 == 0 )) ; then
-                    (( Arg3 = 1 ))
-                    OPT_GDB_VERSION="$OPT"
-                else
-                    _err "Illegal option '$OPT'."
-                fi
+                (( Arg++ ))
+                case $Arg in
+                    1) OPT_GCC_VERSION="$OPT"      ;;
+                    2) OPT_BINUTILS_VERSION="$OPT" ;;
+                    3) OPT_BOOST_VERSION="$OPT"    ;;
+                    4) OPT_GDB_VERSION="$OPT"      ;;
+                    *) _err "Illegal option '$OPT'." ;;
+                esac
                 ;;
         esac
     done
@@ -610,7 +625,7 @@ function build_gcc() {
               ${OPT_GCC_EXTRA_CONF_OPTS}
         _exec make clean
         _exec time make -j $OPT_NUM_JOBS
-        _exec_nox make install
+        _exec_nox time make -j $OPT_NUM_JOBS install
         popd
         _exec touch $Semaphore
         (( BLD_PKG_COUNT++ ))
@@ -623,6 +638,52 @@ function build_gcc() {
     fi
     _exec ls -l ${BLD_REL_DIR}/bin/gcc
     _exec ls -l ${BLD_REL_DIR}/bin/g++
+}
+
+# binutils
+# URL: https://ftp.gnu.org/gnu/binutils/
+function build_bintools() {
+    if [ -z "$OPT_BINUTILS_VERSION" ] ; then
+        return
+    fi
+    _banner "Fct:${LINENO}:${FUNCNAME[0]}"
+    local Version="$OPT_BINUTILS_VERSION"
+    local LocalDir="binutils_$Version"
+    local Semaphore="${BLD_PKG_DIR}/${LocalDir}/${BLD_DONE_SEMAPHORE}"
+
+    if [ ! -f $Semaphore ] ; then
+        _info "Building ${BLD_PKG_DIR}/$LocalDir."
+        pushd $BLD_PKG_DIR
+        [ -d $LocalDir ] && _exec rm -rf $LocalDir || true
+
+        # Cache the package for faster performance.
+        local CachedPkg="${BLD_CACHE_DIR}/$LocalDir.tar"
+        if [ ! -f $CachedPkg ] ; then
+            _exec curl -L https://ftp.gnu.org/gnu/binutils/binutils-$Version.tar.gz --out $CachedPkg
+        fi
+
+        # Extract and build.
+        _exec mkdir $LocalDir
+        _exec cd $LocalDir
+        _exec tar xf $CachedPkg --strip-components=1
+        _exec g++ --version
+        export CC=gcc
+        export CXX=g++
+        _exec_nox ./configure --help
+        _exec ./configure --prefix=$BLD_REL_DIR \
+              CC=gcc \
+              CXX=g++
+        _exec time make -j $OPT_NUM_JOBS
+        _exec time make -j $OPT_NUM_JOBS install
+        unset CC
+        unset CXX
+        popd
+        _exec touch $Semaphore
+        (( OPT_BUILD_COUNT++ ))
+    else
+        _info "Already built ${BLD_PKG_DIR}/$LocalDir."
+    fi
+    _exec ls -l ${BLD_REL_DIR}/bin/as
 }
 
 # boost
@@ -729,7 +790,7 @@ function build_gdb() {
               --disable-multilib \
               --enable-languages='c,c++'
         _exec time make -j $OPT_NUM_JOBS
-        _exec time make install
+        _exec time make -j $OPT_NUM_JOBS install
         unset CC
         unset CXX
         popd
@@ -794,6 +855,7 @@ EOF
 function build_all() {
     _banner "Build all packages."
     build_gcc
+    build_bintools
     build_boost
     build_gdb
     build_enable_disable
@@ -804,7 +866,7 @@ function build_all() {
 # Main
 # ========================================================================
 readonly BASENAME=$(basename -- $(readlink -m ${BASH_SOURCE[0]}))
-readonly VERSION='0.9.1'
+readonly VERSION='0.9.2'
 readonly PLATFORM=$(_platform)
 
 # Start by logging everything.
@@ -818,6 +880,7 @@ _banner "$BASENAME-$VERSION $(date)"
 : ${OPT_NUM_JOBS=$(get_num_procs)}
 : ${OPT_GCC_EXTRA_CONF_OPTS=}
 : ${OPT_GCC_VERSION=}
+: ${OPT_BINUTILS_VERSION=}
 : ${OPT_BOOST_VERSION=}
 : ${OPT_BOOST_FLAVOR='c++11'}
 : ${OPT_GDB_VERSION=}
@@ -863,11 +926,12 @@ Setup Info
     User     : $(whoami)
     Version  : $VERSION
 
-    gcc version    : $OPT_GCC_VERSION
-    gcc extra conf : $OPT_GCC_EXTRA_CONF_OPTS
-    boost version  : $OPT_BOOST_VERSION
-    boost flavor   : $OPT_BOOST_FLAVOR
-    gdb version    : $OPT_GDB_VERSION
+    gcc version      : $OPT_GCC_VERSION
+    gcc extra conf   : $OPT_GCC_EXTRA_CONF_OPTS
+    binutils version : $OPT_BINUTILS_VERSION
+    boost version    : $OPT_BOOST_VERSION
+    boost flavor     : $OPT_BOOST_FLAVOR
+    gdb version      : $OPT_GDB_VERSION
 EOF
 
 prerequisites
