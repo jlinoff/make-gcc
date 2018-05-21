@@ -103,4 +103,4 @@ of boost.
 
 ### Errata
 
-1. To get -D_GLIBCXX_HAVE_FENV_H=1 with gcc-4.8.5, had to follow the instructions [here](https://software.intel.com/en-us/forums/intel-c-compiler/topic/489313).
+1. To get -D_GLIBCXX_HAVE_FENV_H=1 working with gcc-4.8.5, had to follow the instructions [here](https://software.intel.com/en-us/forums/intel-c-compiler/topic/489313).
