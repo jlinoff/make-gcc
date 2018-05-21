@@ -130,12 +130,14 @@ USAGE
 
 DESCRIPTION
     Builds a specified version of the gcc/g++ compiler and optionally
-    the boost library and gdb debugger.
+    binutils, the boost library and gdb debugger.
 
-    To use it after the installation, the LD_LIBRARY_PATH, PATH and
-    MANPATH variables must be set properly. It generates a tool named
-    gcc-enable to set them for you. It also generates a tool named
-    gcc-disable to disable them.
+    To use it after the installation, the LD_LIBRARY_PATH, PATH,
+    INFOPATH and MANPATH variables must be set properly.
+
+    It generates a tool named gcc-enable to set the the environment
+    variables for you and it generates a tool named gcc-disable to
+    disable them.
 
     For each run a log is created in /tmp/$BASENAME-DTS.log where
     DTS is the date-time stamp of the run. The log location can
@@ -810,23 +812,33 @@ function build_enable_disable() {
     local EnableTool="$BLD_REL_DIR/bin/gcc-enable"
     _info "Creating enable: $EnableTool."
     cat >$EnableTool <<EOF
-# Automatically generated.
-export PATH="${BLD_REL_DIR}/bin:\${PATH}"
-export LD_LIBRARY_PATH="${BLD_REL_DIR}/lib64:${BLD_REL_DIR}/lib:\${LD_LIBRARY_PATH}"
-export MANPATH="$BLD_REL_DIR/share/man:\${MANPATH}"
-export INFOPATH="$BLD_REL_DIR/share/info:\${INFOPATH}"
-export MAKE_GCC_CONF="${OPT_GCC_VERSION}"
+if [ -z "$MAKE_GCC_CONF" ] ; then
+  # Automatically generated.
+  export PATH="${BLD_REL_DIR}/bin:\${PATH}"
+  export LD_LIBRARY_PATH="${BLD_REL_DIR}/lib64:${BLD_REL_DIR}/lib:\${LD_LIBRARY_PATH}"
+  export MANPATH="$BLD_REL_DIR/share/man:\${MANPATH}"
+  export INFOPATH="$BLD_REL_DIR/share/info:\${INFOPATH}"
+  export MAKE_GCC_CONF="${OPT_GCC_VERSION}"
+  export MAKE_GCC_CONF_BIN="${BLD_REL_DIR}/bin"
+else
+  echo "WARNING: gcc-enable already enabled, no action taken."
+  echo "         Please call gcc-disable and try again:"
+  echo "           $MAKE_GCC_CONF_BIN/gcc-disable"
+fi
 EOF
 
     local DisableTool="$BLD_REL_DIR/bin/gcc-disable"
     _info "Creating disable: $DisableTool."
     cat >$DisableTool <<EOF
 # Automatically generated.
-export PATH="\$(echo \$PATH | sed -e 's@${BLD_REL_DIR}/bin:@@g')"
-export LD_LIBRARY_PATH="\$(echo \$PATH | sed -e 's@${BLD_REL_DIR}/lib64:${BLD_REL_DIR}/lib:@@g')"
-export MANPATH="\$(echo \$MANPATH | sed -e 's@${BLD_REL_DIR}/share/man:@@g')"
-export INFOPATH="\$(echo \$INFOPATH | sed -e 's@${BLD_REL_DIR}/share/info:@@g')"
-unset MAKE_GCC_CONF
+if [ -n "$MAKE_GCC_CONF" ] ; then
+  export PATH="\$(echo \$PATH | sed -e 's@${BLD_REL_DIR}/bin:@@g')"
+  export LD_LIBRARY_PATH="\$(echo \$PATH | sed -e 's@${BLD_REL_DIR}/lib64:${BLD_REL_DIR}/lib:@@g')"
+  export MANPATH="\$(echo \$MANPATH | sed -e 's@${BLD_REL_DIR}/share/man:@@g')"
+  export INFOPATH="\$(echo \$INFOPATH | sed -e 's@${BLD_REL_DIR}/share/info:@@g')"
+  unset MAKE_GCC_CONF
+  unset MAKE_GCC_CONF_BIN
+fi
 EOF
     set +e
 }
