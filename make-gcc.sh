@@ -126,7 +126,7 @@ function _help() {
 
     cat <<EOF
 USAGE
-    $B$BASENAME$R [OPTIONS] GCC_VERSION [BOOST_VERSION [GDB_VERSION]]
+    $B$BASENAME$R [OPTIONS] GCC_VERSION [BINUTILS_VERSION [BOOST_VERSION [GDB_VERSION]]]
 
 DESCRIPTION
     Builds a specified version of the gcc/g++ compiler and optionally
