@@ -70,7 +70,7 @@ of boost.
 | Position | Argument         | Required | Meaning    |
 | -------: | ---------------- | :-------: | ---------- |
 | 1        | GCC_VERSION      | yes       | The version of gcc to build. |
-| 2        | BINUTILS_VERSION | no        : The version of binutils to build. If not specified, binutils is not built. |
+| 2        | BINUTILS_VERSION | no        | The version of binutils to build. If not specified, binutils is not built. |
 | 3        | BOOST_VERSION.   | no        | The version of boost to build. If not specified, boost is not built. |
 | 4        | GDB_VERSION      | no        | The version of gdb to build. If not specified, gdb is not built. |
 
