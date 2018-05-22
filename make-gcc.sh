@@ -644,7 +644,7 @@ function build_gcc() {
 
 # binutils
 # URL: https://ftp.gnu.org/gnu/binutils/
-function build_bintools() {
+function build_binutils() {
     if [ -z "$OPT_BINUTILS_VERSION" ] ; then
         return
     fi
@@ -867,7 +867,7 @@ EOF
 function build_all() {
     _banner "Build all packages."
     build_gcc
-    build_bintools
+    build_binutils
     build_boost
     build_gdb
     build_enable_disable
@@ -878,7 +878,7 @@ function build_all() {
 # Main
 # ========================================================================
 readonly BASENAME=$(basename -- $(readlink -m ${BASH_SOURCE[0]}))
-readonly VERSION='0.9.2'
+readonly VERSION='0.9.3'
 readonly PLATFORM=$(_platform)
 
 # Start by logging everything.
