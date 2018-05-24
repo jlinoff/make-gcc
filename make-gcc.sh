@@ -618,6 +618,7 @@ function build_gcc() {
               ${ExtraOpts} \
               --prefix=$BLD_REL_DIR \
               --disable-multilib \
+              --enable-gold \
               --enable-languages='c,c++' \
               --enable-threads=posix \
               --enable-checking \
@@ -672,13 +673,20 @@ function build_binutils() {
         export CC=gcc
         export CXX=g++
         _exec_nox ./configure --help
-        _exec ./configure --prefix=$BLD_REL_DIR \
-              CC=gcc \
-              CXX=g++
+        _exec ./configure \
+            --prefix=$BLD_REL_DIR \
+            --enable-shared \
+            --enable-host-shared \
+            --enable-gold \
+            CFLAGS="'-O2 -g -fPIC'" \
+            CXXFLAGS="'-O2 -g -fPIC'" \
+            CC=gcc \
+            CXX=g++
         _exec time make -j $OPT_NUM_JOBS
         _exec time make -j $OPT_NUM_JOBS install
         unset CC
         unset CXX
+        _exec cp -v libiberty/libiberty.a $BLD_REL_DIR/lib/
         popd
         _exec touch $Semaphore
         (( OPT_BUILD_COUNT++ ))
@@ -686,6 +694,9 @@ function build_binutils() {
         _info "Already built ${BLD_PKG_DIR}/$LocalDir."
     fi
     _exec ls -l ${BLD_REL_DIR}/bin/as
+    _exec nm -A -C $BLD_REL_DIR/lib/libiberty.a '|' grep _GLOBAL_OFFSET_TABLE_ '|' wc -l
+    local Num=$(nm -A -C $BLD_REL_DIR/lib/libiberty.a | grep _GLOBAL_OFFSET_TABLE_ | wc -l)
+    (( Num == 0 )) && _exec "Library not compiled with -fPIC: $BLD_REL_DIR/lib/libiberty.a" || true
 }
 
 # boost
@@ -870,7 +881,7 @@ function build_all() {
 # Main
 # ========================================================================
 readonly BASENAME=$(basename -- $(readlink -m ${BASH_SOURCE[0]}))
-readonly VERSION='0.9.3'
+readonly VERSION='0.9.4'
 readonly PLATFORM=$(_platform)
 
 # Start by logging everything.
