@@ -490,7 +490,7 @@ function prerequisites() {
         fi
 
         _exec sudo dnf install -y \
-              curl xz bxz tree time atop htop \
+              curl xz tree time atop htop \
               gawk \
               binutils \
               gzip bzip2 \
@@ -522,7 +522,7 @@ function prerequisites() {
 
         # https://gcc.gnu.org/install/prerequisites.html
         _exec sudo yum install -y \
-              curl xz bxz tree time atop htop \
+              curl xz tree time atop htop \
               gawk \
               binutils \
               gzip bzip2 \
@@ -553,7 +553,7 @@ function prerequisites() {
             _exec touch $Semaphore
         fi
 
-        _exec apt-get install -y \
+        _exec sudo apt-get install -y \
               curl xz-utils tree time atop htop \
               gawk \
               binutils \
